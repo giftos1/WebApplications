@@ -1,13 +1,23 @@
 using System.Collections.Concurrent;
 
 var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddProblemDetails(); // Adds the IProblemDetailsService implementation
 var app = builder.Build();
 
 var _fruit = new ConcurrentDictionary<string, Fruit>();
 
 //app.MapGet("/", () => "Hello World!");
 
-app.MapGet("/", () =>
+if (!app.Environment.IsDevelopment())
+{
+    app.UseExceptionHandler(); // Configure the ExceptionHandlerMiddleware without a path so that it uses the IProblemDetailsService
+}
+
+app.MapGet("/", void () => throw new Exception()); // throw an exception to demonstrate the behavior
+
+
+app.MapGet("/fruit", () =>
 {
     return _fruit;
 });
