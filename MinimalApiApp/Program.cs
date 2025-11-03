@@ -1,4 +1,5 @@
 using MinimalApiApp;
+using System.Collections.Concurrent;
 using System.Security.Cryptography.X509Certificates;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -18,16 +19,29 @@ var persons = new List<Person>
     new Person("Moses", "Dogman"),
 };
 
+// Use a concurrent dictionary to make the API thread-safe
+var _fruit = new ConcurrentDictionary<string, Fruit>();
+
 // lambda expression
-var getFruit = (string id) => Fruit.All[id];
+//var getFruit = (string id) => Fruit.All[id];
 
 // instance methods
 Handlers handlers = new Handlers();
-app.MapPut("/fruit/{id}", handlers.ReplaceFruit);
+app.MapPut("/fruit/{id}", (string id, Fruit fruit) =>
+{
+    _fruit[id] = fruit;
+    return Results.NoContent();
+});
+//app.MapPut("/fruit/{id}", handlers.ReplaceFruit);
 
-app.MapGet("/fruit/{id}", getFruit);
+app.MapGet("/fruit", () => _fruit);
+//app.MapGet("/fruit", () => Fruit.All);
+app.MapGet("/fruit/{id}", (string id) =>
+{
+    return _fruit.TryGetValue(id, out var fruit) ? TypedResults.Ok(fruit) : Results.NotFound();
+});
+//app.MapGet("/fruit/{id}", getFruit);
 
-app.MapGet("/fruit", () => Fruit.All);
 app.MapGet("/person/{name}", (string name) =>
 {
     return persons.Where(p => p.FirstName.StartsWith(name, StringComparison.OrdinalIgnoreCase));
@@ -35,8 +49,27 @@ app.MapGet("/person/{name}", (string name) =>
 
 app.MapGet("/", () => persons.ToList());
 
-app.MapPost("/fruit/{id}", Handlers.AddFruit);
-app.MapDelete("/fruit/{id}", DeleteFruit);
+//app.MapPost("/fruit/{id}", Handlers.AddFruit);
+
+// Try add fruit in the dictionary. If it already exists, return 201 response with a JSON body
+app.MapPost("/fruit/{id}", (string id, Fruit fruit) =>
+{
+    return _fruit.TryAdd(id, fruit) ? TypedResults.Created($"/fruit/{id}") : Results.BadRequest(new
+    {
+        id = "A fruit with this id already exists"
+    });
+});
+
+// Try remove a fruit from dictionary. Return 204 No Content Response after deleting
+app.MapDelete("/fruit/{id}", (string id) =>
+{
+    _fruit.TryRemove(id, out _);
+    return Results.NoContent();
+});
+
+
+//app.MapDelete("/fruit/{id}", DeleteFruit);
+
 app.Run();
 
 // local function
@@ -68,3 +101,8 @@ API automatically deserializes the JSON in the request body to a
 Fruit instance before calling the endpoint handler.
 
 */
+
+/*
+- Results and TypedResults perform the same function, as helpers for generating common status codes
+ 
+ */
