@@ -7,15 +7,16 @@ var app = builder.Build();
 
 var _fruit = new ConcurrentDictionary<string, Fruit>();
 
-//app.MapGet("/", () => "Hello World!");
 
 if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler(); // Configure the ExceptionHandlerMiddleware without a path so that it uses the IProblemDetailsService
 }
 
-app.MapGet("/", void () => throw new Exception()); // throw an exception to demonstrate the behavior
-
+// The StatusCodePagesMiddleware reexcutes the middleware pipeline with an error handling path
+// as you can with the ExceptionHandlerMiddleware (useful with Razor Pages)
+// It ensures that your API returns a ProblemDetails response for all error responses
+app.UseStatusCodePages();
 
 app.MapGet("/fruit", () =>
 {
