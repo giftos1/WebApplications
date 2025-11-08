@@ -1,20 +1,53 @@
-﻿namespace MinimalApiApp3
+﻿using System.Reflection;
+
+namespace MinimalApiApp3
 {
     public class ValidationHelper
     {
-        internal static async ValueTask<object?> ValidateId(EndpointFilterInvocationContext context, EndpointFilterDelegate next)
+        internal static EndpointFilterDelegate ValidateIdFactory(EndpointFilterFactoryContext context, EndpointFilterDelegate next)
         {
-            var id = context.GetArgument<string>(0);
+            ParameterInfo[] parameters = context.MethodInfo.GetParameters();
+            Console.WriteLine(parameters);
+            int? idPosition = null;
 
-            if (string.IsNullOrEmpty(id))
+            for (int i = 0; i < parameters.Length; i++)
             {
-                return Results.ValidationProblem(new Dictionary<string, string[]>
+                if (parameters[i].Name == "id" && parameters[i].ParameterType == typeof(string))
                 {
-                    {"id", new[] {"Invalid id"} }
-                });
+                    idPosition = i;
+                    break;
+                }
             }
-            return await next(context);
+
+            if (!idPosition.HasValue)
+            {
+                return next;
+            }
+
+            return async (invocationContext) =>
+            {
+                var id = invocationContext.GetArgument<string>(idPosition.Value);
+                if (string.IsNullOrEmpty(id))
+                {
+                    return Results.ValidationProblem(new Dictionary<string, string[]>
+                    {
+                        {"id", new[] {"The id parameter is required"} }
+                    });
+                }
+                return await next(invocationContext);
+            };
         }
     }
 }
+
+/*
+❷The context parameter provides details about the endpoint handler method.
+❸ GetParameters() provides details about the parameters of the handler being called.
+❹ Loops through the parameters to find the string id parameter and record its position
+❺ If the id parameter isn’t not found, doesn’t add a filter, but returns the remainder of the
+pipeline
+❻ If the id parameter exists, returns a filter function (the filter executed for the endpoint)
+❼ If the id isn’t valid, returns a Problem Details result
+❽ If the id is valid, executes the next filter in the pipeline
+*/
 
