@@ -1,4 +1,4 @@
-using MinimalApiApp2;
+using MinimalApiApp3;
 using System.Collections.Concurrent;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -52,6 +52,11 @@ record Fruit(string Name, int Stock)
 {
     public static readonly Dictionary<string, Fruit> All = new();
 }
+
+/*A filter factory is a method that returns a filter function
+ASP.NET Core executes the filter factory when it’s building your app and incorporates the returned filter into the filter pipeline for the app
+You can use the same filterfactory function to emit a different filter for each endpoint, with each filter tailored to the endpoint’s parameters
+*/
 
 /*TIP Where possible, consider using middleware for cross - cutting
 concerns.Use filters when you need different behavior for different
