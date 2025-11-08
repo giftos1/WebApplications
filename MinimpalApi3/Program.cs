@@ -29,7 +29,7 @@ app.MapGet("/fruit", () =>
 app.MapGet("/fruit/{id}", (string id) =>
 {
     return _fruit.TryGetValue(id, out var fruit) ? TypedResults.Ok(fruit) : Results.Problem(statusCode: 404);
-}).AddEndpointFilter(ValidationHelper.ValidateId)
+}).AddEndpointFilterFactory(ValidationHelper.ValidateIdFactory) // The filter factory can handle endpoints with different method signatures.
 .AddEndpointFilter(async (context, next) =>
 {
     app.Logger.LogInformation("Executing filter...");
@@ -44,7 +44,7 @@ app.MapPost("/fruit/{id}", (string id, Fruit fruit) =>
     {
         {"id", new[] {"A fruit with that id already exists"} }
     });
-});
+}).AddEndpointFilterFactory(ValidationHelper.ValidateIdFactory);
 
 app.Run();
 
